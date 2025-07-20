@@ -374,7 +374,7 @@ void freeModel(Model *model) {
 
 // Save model
 void saveModel(Model *m, char *fileName) {
-  int fileDescriptor = open(fileName, O_CREAT | O_RDWR | O_TRUNC, 0777);
+  int fileDescriptor = open(fileName, O_CREAT | O_WRONLY, 0777);
   int stdOut = dup(STDOUT_FILENO);
 
   int layerCount = m->layerCount;
@@ -386,13 +386,84 @@ void saveModel(Model *m, char *fileName) {
     neuronsInLayers[i] = m->layers[i]->neuronCount;
   }
 
-  dprintf(fileDescriptor, "\n");
+  dprintf(fileDescriptor, "\n\n");
 
-  for (int i = 0; i < layerCount; i++) {
+  for (int i = 1; i < layerCount; i++) {
     for (int j = 0; j < neuronsInLayers[i]; j++) {
-      dprintf(fileDescriptor, "%f ", m->layers[i]->neurons[j]->weights[0]);
+      for (int k = 0; k < m->layers[i - 1]->neuronCount; k++) {
+        dprintf(fileDescriptor, "%f ", m->layers[i]->neurons[j]->weights[k]);
+      }
+      dprintf(fileDescriptor, "\n");
     }
+
+    dprintf(fileDescriptor, "\n");
   }
 }
 
 // Load model
+void loadModel(Model *m, char *fileName) {
+  FILE *fp = fopen(fileName, "r");
+
+  if (!fp) {
+    perror("File not found!");
+    exit(EXIT_FAILURE);
+  }
+
+  char *line = NULL;
+  size_t len = 0;
+
+  ssize_t read = getline(&line, &len, fp);
+
+  if (read == -1) {
+    printf("Error during read\n");
+    exit(EXIT_FAILURE);
+  }
+
+  char layerBuffer[16];
+  int i = 0;
+
+  while (line[i] != ' ' && line[i] != '\n' && line[i] != '\0' && i < 15) {
+    layerBuffer[i] = line[i];
+    i++;
+  }
+  layerBuffer[i] = '\0';
+
+  int layers = atoi(layerBuffer);
+  printf("\nNumber of layers: %d", layers);
+
+  int *neuronsInLayers = (int *)malloc(sizeof(int) * (layers));
+
+  for (int k = 0; k < layers; k++) {
+    char buffer[16];
+    int j = 0;
+
+    while (line[i] == ' ' || line[i] == '-')
+      i++;
+
+    while (line[i] >= '0' && line[i] <= '9' && j < 15) {
+      buffer[j++] = line[i++];
+    }
+    buffer[j] = '\0';
+
+    neuronsInLayers[k] = atoi(buffer);
+    printf("\nNeurons in layer %d: %d", k, neuronsInLayers[k]);
+  }
+
+  m = initModel(layers, neuronsInLayers);
+
+  for (int i = 1; i < layers; i++) {
+    double *currentLayerWeights = (double *)malloc(sizeof(double) * neuronsInLayers[i]);
+
+    for (int j = 0; j < neuronsInLayers[i]; j++) {
+
+      for (int k = 0; k < m->layers[i - 1]->neuronCount; k++) {
+        m->layers[i]->neurons[j]->weights[k] = X
+      }
+    }
+
+    free(currentLayerWeights);
+  }
+
+  free(line);
+  fclose(fp);
+}

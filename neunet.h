@@ -37,6 +37,6 @@ int recognizeNumber(Model *m, double *img, int outputs);
 void freeModel(Model *m);
 
 void saveModel(Model *m, char *fileName);
-// void loadModelWeights(Model **m, const char *filename);
+void loadModel(Model *m, char *fileName);
 
 #endif

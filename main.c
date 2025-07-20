@@ -5,106 +5,132 @@
 #include <time.h>
 #include <unistd.h>
 
+#define MAX_NAME_LENGTH 20
+
 int getRandomInt(int min, int max) { return min + rand() / (RAND_MAX / (max - min + 1) + 1); }
 
-int main() {
+int main(int argc, char *argv[]) {
+  Model *myModel;
   int layers, inputs, outputs, epochs;
 
-  printf("Number of hidden layers: ");
-  scanf("%d", &layers);
+  printf("Loading dataset...\n");
+  load_mnist();
+  printf("Dataset loaded!\n\n");
 
-  if (layers <= 0) {
-    printf("Value not valid!");
-    return EXIT_FAILURE;
-  } else
-    printf("\n");
+  if (argc > 1) {
+    printf("Nome inserito: %s", argv[1]);
 
-  int *neuronsInLayers = (int *)malloc(sizeof(int) * (layers + 2));
+    loadModel(myModel, argv[1]);
+  } else {
 
-  printf("Number of inputs: ");
-  scanf(" %d", &inputs);
-  neuronsInLayers[0] = inputs;
+    printf("Number of hidden layers: ");
+    scanf("%d", &layers);
 
-  printf("Number of outputs: ");
-  scanf(" %d", &outputs);
-  neuronsInLayers[layers + 1] = outputs;
-
-  for (int i = 1; i <= layers; i++) {
-    int neurons;
-
-    printf("Number of neurons for hidden layer %d: ", i);
-    scanf("%d", &neurons);
-
-    if (neurons <= 0) {
+    if (layers <= 0) {
       printf("Value not valid!");
       return EXIT_FAILURE;
-    } else {
-      neuronsInLayers[i] = neurons;
+    } else
+      printf("\n");
+
+    int *neuronsInLayers = (int *)malloc(sizeof(int) * (layers + 2));
+
+    printf("Number of inputs: ");
+    scanf(" %d", &inputs);
+    neuronsInLayers[0] = inputs;
+
+    printf("Number of outputs: ");
+    scanf(" %d", &outputs);
+    neuronsInLayers[layers + 1] = outputs;
+
+    for (int i = 1; i <= layers; i++) {
+      int neurons;
+
+      printf("Number of neurons for hidden layer %d: ", i);
+      scanf("%d", &neurons);
+
+      if (neurons <= 0) {
+        printf("Value not valid!");
+        return EXIT_FAILURE;
+      } else {
+        neuronsInLayers[i] = neurons;
+      }
+    }
+
+    printf("Number of epochs: ");
+    scanf(" %d", &epochs);
+
+    printf("\nChoose an activation function from the following\n");
+
+    for (int i = 0; i < ACTIVATION_FUNCTIONS; i++) {
+      printf("%d - %s\n", i, possibleActivationFunctions[i]);
+    }
+
+    printf("Your choice: ");
+    scanf(" %d", &activationFunctionToUse);
+
+    if (activationFunctionToUse < 0 || activationFunctionToUse > ACTIVATION_FUNCTIONS) {
+      printf("Value not valid!");
+      return EXIT_FAILURE;
+    } else
+      printf("\n");
+
+    myModel = initModel(layers + 2, neuronsInLayers);
+
+    double **trainInputs = malloc(NUM_TRAIN * sizeof(double *));
+    for (int i = 0; i < NUM_TRAIN; i++) {
+      trainInputs[i] = trainImages[i];
+    }
+
+    trainModel(myModel, trainInputs, NUM_TRAIN, trainLabels, outputs, epochs, 0.01);
+
+    printf("Train successful! Starting test...\n");
+
+    double **testOutputs = malloc(NUM_TEST * sizeof(double *));
+    for (int i = 0; i < NUM_TEST; i++) {
+      testOutputs[i] = testImages[i];
+    }
+
+    double accuracy = calculateAccuracy(myModel, testOutputs, NUM_TEST, testLabels, outputs);
+    printf("\nCalculated accuracy: %.2f", accuracy * 100);
+    printf("%%");
+
+    char answer, fileName[MAX_NAME_LENGTH];
+    printf("Do you want to save the trained model? y/n (default: y): ");
+    scanf("%c", &answer);
+
+    switch (answer) {
+    case 'n':
+      break;
+
+    default:
+      printf("\nFile name: ");
+      scanf("%s", fileName);
+
+      if (strstr(fileName, ".txt") == NULL) {
+        strcat(fileName, ".txt");
+      }
+
+      saveModel(myModel, fileName);
+      break;
     }
   }
 
-  printf("Number of epochs: ");
-  scanf(" %d", &epochs);
+  while (1) {
+    int imageIndex;
+    printf("\n\nInsert a value between 0 and %d, type [-1] to exit: ", NUM_TEST - 1);
+    scanf(" %d", &imageIndex);
 
-  printf("\nChoose an activation function from the following\n");
+    if (imageIndex == -1) {
+      return EXIT_SUCCESS;
+    } else if (imageIndex < 0 || imageIndex >= NUM_TEST) {
+      printf("\nValue not valid!");
+      return EXIT_FAILURE;
+    }
 
-  for (int i = 0; i < ACTIVATION_FUNCTIONS; i++) {
-    printf("%d - %s\n", i, possibleActivationFunctions[i]);
-  }
-
-  printf("Your choice: ");
-  scanf(" %d", &activationFunctionToUse);
-
-  if (activationFunctionToUse < 0 || activationFunctionToUse > ACTIVATION_FUNCTIONS) {
-    printf("Value not valid!");
-    return EXIT_FAILURE;
-  } else
     printf("\n");
+    printImage(testImages[imageIndex]);
 
-  Model *myModel = initModel(layers + 2, neuronsInLayers);
-
-  char fileName[] = "palla.txt";
-  saveModel(myModel, fileName);
-  // printf("Loading dataset...\n");
-  // load_mnist();
-  // printf("Dataset loaded!\n\n");
-
-  // double **trainInputs = malloc(NUM_TRAIN * sizeof(double *));
-  // for (int i = 0; i < NUM_TRAIN; i++) {
-  //   trainInputs[i] = trainImages[i];
-  // }
-
-  // srand(time(NULL) ^ getpid());
-
-  // trainModel(myModel, trainInputs, NUM_TRAIN, trainLabels, outputs, epochs, 0.01);
-
-  // printf("Train successful! Starting test...\n");
-
-  // double **testOutputs = malloc(NUM_TEST * sizeof(double *));
-  // for (int i = 0; i < NUM_TEST; i++) {
-  //   testOutputs[i] = testImages[i];
-  // }
-
-  // double accuracy = calculateAccuracy(myModel, testOutputs, NUM_TEST, testLabels, outputs);
-  // printf("\nCalculated accuracy: %.2f", accuracy * 100);
-  // printf("%%");
-
-  // while (1) {
-  //   int imageIndex;
-  //   printf("\n\nInsert a value between 0 and %d, type [-1] to exit: ", NUM_TEST - 1);
-  //   scanf(" %d", &imageIndex);
-
-  //   if (imageIndex == -1) {
-  //     return EXIT_SUCCESS;
-  //   } else if (imageIndex < 0 || imageIndex >= NUM_TEST) {
-  //     printf("\nValue not valid!");
-  //     return EXIT_FAILURE;
-  //   }
-
-  //   printf("\n");
-  //   printImage(testImages[imageIndex]);
-
-  //   int guess = recognizeNumber(myModel, testImages[imageIndex], outputs);
-  //   printf("Label: %d - The model recognized a %d", testLabels[imageIndex], guess);
-  // }
+    int guess = recognizeNumber(myModel, testImages[imageIndex], outputs);
+    printf("Label: %d - The model recognized a %d", testLabels[imageIndex], guess);
+  }
 }
