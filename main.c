@@ -63,46 +63,48 @@ int main() {
 
   Model *myModel = initModel(layers + 2, neuronsInLayers);
 
-  printf("Loading dataset...\n");
-  load_mnist();
-  printf("Dataset loaded!\n\n");
+  char fileName[] = "palla.txt";
+  saveModel(myModel, fileName);
+  // printf("Loading dataset...\n");
+  // load_mnist();
+  // printf("Dataset loaded!\n\n");
 
-  double **trainInputs = malloc(NUM_TRAIN * sizeof(double *));
-  for (int i = 0; i < NUM_TRAIN; i++) {
-    trainInputs[i] = trainImages[i];
-  }
+  // double **trainInputs = malloc(NUM_TRAIN * sizeof(double *));
+  // for (int i = 0; i < NUM_TRAIN; i++) {
+  //   trainInputs[i] = trainImages[i];
+  // }
 
-  srand(time(NULL) ^ getpid());
+  // srand(time(NULL) ^ getpid());
 
-  trainModel(myModel, trainInputs, NUM_TRAIN, trainLabels, outputs, epochs, 0.01);
+  // trainModel(myModel, trainInputs, NUM_TRAIN, trainLabels, outputs, epochs, 0.01);
 
-  printf("Train successful! Starting test...\n");
+  // printf("Train successful! Starting test...\n");
 
-  double **testOutputs = malloc(NUM_TEST * sizeof(double *));
-  for (int i = 0; i < NUM_TEST; i++) {
-    testOutputs[i] = testImages[i];
-  }
+  // double **testOutputs = malloc(NUM_TEST * sizeof(double *));
+  // for (int i = 0; i < NUM_TEST; i++) {
+  //   testOutputs[i] = testImages[i];
+  // }
 
-  double accuracy = calculateAccuracy(myModel, testOutputs, NUM_TEST, testLabels, outputs);
-  printf("\nCalculated accuracy: %.2f", accuracy * 100);
-  printf("%%");
+  // double accuracy = calculateAccuracy(myModel, testOutputs, NUM_TEST, testLabels, outputs);
+  // printf("\nCalculated accuracy: %.2f", accuracy * 100);
+  // printf("%%");
 
-  while (1) {
-    int imageIndex;
-    printf("\n\nInsert a value between 0 and %d, type [-1] to exit: ", NUM_TEST - 1);
-    scanf(" %d", &imageIndex);
+  // while (1) {
+  //   int imageIndex;
+  //   printf("\n\nInsert a value between 0 and %d, type [-1] to exit: ", NUM_TEST - 1);
+  //   scanf(" %d", &imageIndex);
 
-    if (imageIndex == -1) {
-      return EXIT_SUCCESS;
-    } else if (imageIndex < 0 || imageIndex >= NUM_TEST) {
-      printf("\nValue not valid!");
-      return EXIT_FAILURE;
-    }
+  //   if (imageIndex == -1) {
+  //     return EXIT_SUCCESS;
+  //   } else if (imageIndex < 0 || imageIndex >= NUM_TEST) {
+  //     printf("\nValue not valid!");
+  //     return EXIT_FAILURE;
+  //   }
 
-    printf("\n");
-    printImage(testImages[imageIndex]);
+  //   printf("\n");
+  //   printImage(testImages[imageIndex]);
 
-    int guess = recognizeNumber(myModel, testImages[imageIndex], outputs);
-    printf("Label: %d - The model recognized a %d", testLabels[imageIndex], guess);
-  }
+  //   int guess = recognizeNumber(myModel, testImages[imageIndex], outputs);
+  //   printf("Label: %d - The model recognized a %d", testLabels[imageIndex], guess);
+  // }
 }

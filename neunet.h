@@ -36,7 +36,7 @@ double calculateAccuracy(Model *m, double **testSet, int testSize, int *testLabe
 int recognizeNumber(Model *m, double *img, int outputs);
 void freeModel(Model *m);
 
-// void saveModelWeights(Model *m);
+void saveModel(Model *m, char *fileName);
 // void loadModelWeights(Model **m, const char *filename);
 
 #endif

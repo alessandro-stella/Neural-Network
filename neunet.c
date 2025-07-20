@@ -1,9 +1,11 @@
 #include "neunet.h"
+#include <fcntl.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 // Xavier normal (Gaussian)
 double randNormalized() { return ((double)rand() / RAND_MAX) * 2.0 - 1.0; }
@@ -371,6 +373,26 @@ void freeModel(Model *model) {
 }
 
 // Save model
-void saveModel(Model *m) {}
+void saveModel(Model *m, char *fileName) {
+  int fileDescriptor = open(fileName, O_CREAT | O_RDWR | O_TRUNC, 0777);
+  int stdOut = dup(STDOUT_FILENO);
+
+  int layerCount = m->layerCount;
+  int *neuronsInLayers = (int *)malloc(sizeof(int) * layerCount);
+  dprintf(fileDescriptor, "%d - ", layerCount);
+
+  for (int i = 0; i < layerCount; i++) {
+    dprintf(fileDescriptor, "%d ", m->layers[i]->neuronCount);
+    neuronsInLayers[i] = m->layers[i]->neuronCount;
+  }
+
+  dprintf(fileDescriptor, "\n");
+
+  for (int i = 0; i < layerCount; i++) {
+    for (int j = 0; j < neuronsInLayers[i]; j++) {
+      dprintf(fileDescriptor, "%f ", m->layers[i]->neurons[j]->weights[0]);
+    }
+  }
+}
 
 // Load model
