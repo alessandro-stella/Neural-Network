@@ -306,6 +306,8 @@ void trainModel(Model *m, double **trainSet, int trainSize, int *trainLabels, in
 
 // Calculate model accuracy
 double calculateAccuracy(Model *m, double **testSet, int testSize, int *testLabels, int outputs) {
+  printf("\n\nStarting to load values...\n");
+
   int correctGuesses = 0;
 
   for (int i = 0; i < testSize; i++) {
@@ -373,9 +375,8 @@ void freeModel(Model *model) {
 }
 
 // Save model
-void saveModel(Model *m, char *fileName) {
+void saveModel(Model *m, char *fileName, int activationFunctionToUse) {
   int fileDescriptor = open(fileName, O_CREAT | O_WRONLY, 0777);
-  int stdOut = dup(STDOUT_FILENO);
 
   int layerCount = m->layerCount;
   int *neuronsInLayers = (int *)malloc(sizeof(int) * layerCount);
@@ -386,14 +387,15 @@ void saveModel(Model *m, char *fileName) {
     neuronsInLayers[i] = m->layers[i]->neuronCount;
   }
 
-  dprintf(fileDescriptor, "\n\n");
+  dprintf(fileDescriptor, "%d\n\n", activationFunctionToUse);
 
   for (int i = 1; i < layerCount; i++) {
     for (int j = 0; j < neuronsInLayers[i]; j++) {
       for (int k = 0; k < m->layers[i - 1]->neuronCount; k++) {
-        dprintf(fileDescriptor, "%f ", m->layers[i]->neurons[j]->weights[k]);
+        dprintf(fileDescriptor, "%.17g ", m->layers[i]->neurons[j]->weights[k]);
       }
-      dprintf(fileDescriptor, "\n");
+
+      dprintf(fileDescriptor, "%.17g\n", m->layers[i]->neurons[j]->bias);
     }
 
     dprintf(fileDescriptor, "\n");
@@ -401,7 +403,38 @@ void saveModel(Model *m, char *fileName) {
 }
 
 // Load model
-void loadModel(Model *m, char *fileName) {
+double *getNeuronValues(FILE *fp, int neurons, double *bias) {
+  char *line = NULL;
+  size_t len = 0;
+  ssize_t read = getline(&line, &len, fp);
+
+  if (read == -1) {
+    free(line);
+    return NULL;
+  }
+
+  double *values = malloc(sizeof(double) * neurons);
+  int count = 0;
+
+  char *token = strtok(line, " \t\n");
+  while (token != NULL && count < neurons) {
+    char *endptr;
+    values[count++] = strtod(token, &endptr);
+    token = strtok(NULL, " \t\n");
+  }
+
+  if (token != NULL) {
+    char *endptr;
+    *bias = strtod(token, &endptr);
+  } else {
+    *bias = 0.0;
+  }
+
+  free(line);
+  return values;
+}
+
+void loadModel(Model **m, char *fileName, int *outputs, int *activationFunctionToUse) {
   FILE *fp = fopen(fileName, "r");
 
   if (!fp) {
@@ -411,59 +444,91 @@ void loadModel(Model *m, char *fileName) {
 
   char *line = NULL;
   size_t len = 0;
-
   ssize_t read = getline(&line, &len, fp);
 
   if (read == -1) {
     printf("Error during read\n");
+    free(line);
+    fclose(fp);
     exit(EXIT_FAILURE);
   }
 
-  char layerBuffer[16];
+  char layerbuffer[16];
   int i = 0;
 
   while (line[i] != ' ' && line[i] != '\n' && line[i] != '\0' && i < 15) {
-    layerBuffer[i] = line[i];
+    layerbuffer[i] = line[i];
     i++;
   }
-  layerBuffer[i] = '\0';
+  layerbuffer[i] = '\0';
 
-  int layers = atoi(layerBuffer);
-  printf("\nNumber of layers: %d", layers);
+  int layers = atoi(layerbuffer);
 
   int *neuronsInLayers = (int *)malloc(sizeof(int) * (layers));
 
   for (int k = 0; k < layers; k++) {
-    char buffer[16];
+    int bufferSize = 16;
+    char buffer[bufferSize];
     int j = 0;
 
     while (line[i] == ' ' || line[i] == '-')
       i++;
 
-    while (line[i] >= '0' && line[i] <= '9' && j < 15) {
+    while (line[i] >= '0' && line[i] <= '9' && j < bufferSize - 1) {
       buffer[j++] = line[i++];
     }
     buffer[j] = '\0';
 
     neuronsInLayers[k] = atoi(buffer);
-    printf("\nNeurons in layer %d: %d", k, neuronsInLayers[k]);
   }
 
-  m = initModel(layers, neuronsInLayers);
+  char activationFunctionBuffer[16];
+  int j = 0;
 
-  for (int i = 1; i < layers; i++) {
-    double *currentLayerWeights = (double *)malloc(sizeof(double) * neuronsInLayers[i]);
+  while (line[i] == ' ' || line[i] == '-')
+    i++;
 
-    for (int j = 0; j < neuronsInLayers[i]; j++) {
-
-      for (int k = 0; k < m->layers[i - 1]->neuronCount; k++) {
-        m->layers[i]->neurons[j]->weights[k] = X
-      }
-    }
-
-    free(currentLayerWeights);
+  while (line[i] != ' ' && line[i] != '\n' && line[i] != '\0' && j < 15) {
+    activationFunctionBuffer[j++] = line[i++];
   }
+  activationFunctionBuffer[j] = '\0';
+
+  *activationFunctionToUse = atoi(activationFunctionBuffer);
+  printf("\nRecognized this model:");
+
+  printf("\nInputs: %d", neuronsInLayers[0]);
+  printf("\nOutputs: %d", neuronsInLayers[layers - 1]);
+
+  printf("\nNeurons in hidden layers: [");
+  for (int i = 1; i < layers - 1; i++) {
+    printf("%d", neuronsInLayers[i]);
+
+    if (i != layers - 2)
+      printf(", ");
+  }
+  printf("]");
+
+  printf("\nActivation function found in file: %s", activationFunctionBuffer);
+  *m = initModel(layers, neuronsInLayers);
 
   free(line);
+
+  for (int i = 1; i < layers; i++) {
+    read = getline(&line, &len, fp);
+
+    for (int j = 0; j < neuronsInLayers[i]; j++) {
+      double bias;
+      double *weights = getNeuronValues(fp, neuronsInLayers[i - 1], &bias);
+
+      for (int k = 0; k < neuronsInLayers[i - 1]; k++)
+        (*m)->layers[i]->neurons[j]->weights[k] = weights[k];
+
+      (*m)->layers[i]->neurons[j]->bias = bias;
+
+      free(weights);
+    }
+  }
+
+  *outputs = neuronsInLayers[layers - 1];
   fclose(fp);
 }

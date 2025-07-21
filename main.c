@@ -1,5 +1,6 @@
 #include "mnist.h"
 #include "neunet.h"
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -7,10 +8,8 @@
 
 #define MAX_NAME_LENGTH 20
 
-int getRandomInt(int min, int max) { return min + rand() / (RAND_MAX / (max - min + 1) + 1); }
-
 int main(int argc, char *argv[]) {
-  Model *myModel;
+  Model *myModel, *newModel;
   int layers, inputs, outputs, epochs;
 
   printf("Loading dataset...\n");
@@ -18,11 +17,8 @@ int main(int argc, char *argv[]) {
   printf("Dataset loaded!\n\n");
 
   if (argc > 1) {
-    printf("Nome inserito: %s", argv[1]);
-
-    loadModel(myModel, argv[1]);
+    loadModel(&myModel, argv[1], &outputs, &activationFunctionToUse);
   } else {
-
     printf("Number of hidden layers: ");
     scanf("%d", &layers);
 
@@ -83,20 +79,10 @@ int main(int argc, char *argv[]) {
 
     trainModel(myModel, trainInputs, NUM_TRAIN, trainLabels, outputs, epochs, 0.01);
 
-    printf("Train successful! Starting test...\n");
-
-    double **testOutputs = malloc(NUM_TEST * sizeof(double *));
-    for (int i = 0; i < NUM_TEST; i++) {
-      testOutputs[i] = testImages[i];
-    }
-
-    double accuracy = calculateAccuracy(myModel, testOutputs, NUM_TEST, testLabels, outputs);
-    printf("\nCalculated accuracy: %.2f", accuracy * 100);
-    printf("%%");
-
     char answer, fileName[MAX_NAME_LENGTH];
+    fflush(stdout);
     printf("Do you want to save the trained model? y/n (default: y): ");
-    scanf("%c", &answer);
+    scanf(" %c", &answer);
 
     switch (answer) {
     case 'n':
@@ -104,16 +90,25 @@ int main(int argc, char *argv[]) {
 
     default:
       printf("\nFile name: ");
-      scanf("%s", fileName);
+      scanf(" %s", fileName);
 
       if (strstr(fileName, ".txt") == NULL) {
         strcat(fileName, ".txt");
       }
 
-      saveModel(myModel, fileName);
+      saveModel(myModel, fileName, activationFunctionToUse);
       break;
     }
   }
+
+  double **testOutputs = malloc(NUM_TEST * sizeof(double *));
+  for (int i = 0; i < NUM_TEST; i++) {
+    testOutputs[i] = testImages[i];
+  }
+
+  double accuracy = calculateAccuracy(myModel, testOutputs, NUM_TEST, testLabels, outputs);
+  printf("\nCalculated accuracy: %.2f", accuracy * 100);
+  printf("%%");
 
   while (1) {
     int imageIndex;

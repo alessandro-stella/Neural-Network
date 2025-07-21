@@ -36,7 +36,7 @@ double calculateAccuracy(Model *m, double **testSet, int testSize, int *testLabe
 int recognizeNumber(Model *m, double *img, int outputs);
 void freeModel(Model *m);
 
-void saveModel(Model *m, char *fileName);
-void loadModel(Model *m, char *fileName);
+void saveModel(Model *m, char *fileName, int activationFunctionToUse);
+void loadModel(Model **m, char *fileName, int *outputs, int *activationFunctionToUse);
 
 #endif
