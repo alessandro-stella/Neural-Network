@@ -123,9 +123,21 @@ double actFunctionDerivative(double x) {
 }
 
 // Forward propagation
-void calcNeuronValue(Neuron *n, Layer *l) {
-  double output;
+// void calcNeuronValue(Neuron *n, Layer *l) {
+//   double output;
+//
+//   for (int i = 0; i < l->neuronCount; i++) {
+//     output += n->weights[i] * l->neurons[i]->activatedValue;
+//   }
+//
+//   n->value = output + n->bias;
+//   n->activatedValue = actFunction(n->value);
+// }
 
+void calcNeuronValue(Neuron *n, Layer *l) {
+  double output = 0.0;
+
+#pragma omp parallel for reduction(+ : output)
   for (int i = 0; i < l->neuronCount; i++) {
     output += n->weights[i] * l->neurons[i]->activatedValue;
   }
@@ -168,6 +180,44 @@ double crossEntropyLoss(double *predicted, int trueLabel, int outputSize) {
   return -log(predicted[trueLabel] + epsilon);
 }
 
+// double *forwardPropagation(Model *m, double *trainValues) {
+//   for (int i = 0; i < m->layers[0]->neuronCount; i++) {
+//     m->layers[0]->neurons[i]->value = trainValues[i];
+//     m->layers[0]->neurons[i]->activatedValue = trainValues[i];
+//   }
+//
+//   for (int i = 1; i < m->layerCount - 1; i++) {
+//     for (int j = 0; j < m->layers[i]->neuronCount; j++) {
+//       calcNeuronValue(m->layers[i]->neurons[j], m->layers[i - 1]);
+//
+//       m->layers[i]->neurons[j]->activatedValue = actFunction(m->layers[i]->neurons[j]->value);
+//     }
+//   }
+//
+//   Layer *lastLayer = m->layers[m->layerCount - 1];
+//   for (int j = 0; j < lastLayer->neuronCount; j++) {
+//     calcNeuronValue(lastLayer->neurons[j], m->layers[m->layerCount - 2]);
+//
+//     lastLayer->neurons[j]->activatedValue = lastLayer->neurons[j]->value;
+//   }
+//
+//   double *logits = (double *)malloc(sizeof(double) * lastLayer->neuronCount);
+//   for (int j = 0; j < lastLayer->neuronCount; j++) {
+//     logits[j] = lastLayer->neurons[j]->activatedValue;
+//   }
+//
+//   double *predictedValues = (double *)malloc(sizeof(double) * lastLayer->neuronCount);
+//   applySoftmax(logits, predictedValues, lastLayer->neuronCount);
+//
+//   for (int j = 0; j < lastLayer->neuronCount; j++) {
+//     lastLayer->neurons[j]->activatedValue = predictedValues[j];
+//   }
+//
+//   free(logits);
+//
+//   return predictedValues;
+// }
+
 double *forwardPropagation(Model *m, double *trainValues) {
   for (int i = 0; i < m->layers[0]->neuronCount; i++) {
     m->layers[0]->neurons[i]->value = trainValues[i];
@@ -175,17 +225,17 @@ double *forwardPropagation(Model *m, double *trainValues) {
   }
 
   for (int i = 1; i < m->layerCount - 1; i++) {
+#pragma omp parallel for
     for (int j = 0; j < m->layers[i]->neuronCount; j++) {
       calcNeuronValue(m->layers[i]->neurons[j], m->layers[i - 1]);
-
-      m->layers[i]->neurons[j]->activatedValue = actFunction(m->layers[i]->neurons[j]->value);
     }
   }
 
   Layer *lastLayer = m->layers[m->layerCount - 1];
+
+#pragma omp parallel for
   for (int j = 0; j < lastLayer->neuronCount; j++) {
     calcNeuronValue(lastLayer->neurons[j], m->layers[m->layerCount - 2]);
-
     lastLayer->neurons[j]->activatedValue = lastLayer->neurons[j]->value;
   }
 
@@ -225,7 +275,18 @@ void computeDeltaHiddenLayer(Layer *current, Layer *next, double *deltaCurrent, 
   }
 }
 
+// void updateWeightsAndBias(Layer *prev, Layer *curr, double *delta, double learningRate) {
+//   for (int i = 0; i < curr->neuronCount; i++) {
+//     for (int j = 0; j < prev->neuronCount; j++) {
+//       double input = prev->neurons[j]->activatedValue;
+//       curr->neurons[i]->weights[j] -= learningRate * delta[i] * input;
+//     }
+//     curr->neurons[i]->bias -= learningRate * delta[i];
+//   }
+// }
+
 void updateWeightsAndBias(Layer *prev, Layer *curr, double *delta, double learningRate) {
+#pragma omp parallel for
   for (int i = 0; i < curr->neuronCount; i++) {
     for (int j = 0; j < prev->neuronCount; j++) {
       double input = prev->neurons[j]->activatedValue;
