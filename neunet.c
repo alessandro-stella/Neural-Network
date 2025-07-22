@@ -164,7 +164,7 @@ double *normalizeOutput(Layer *l) {
 }
 
 double crossEntropyLoss(double *predicted, int trueLabel, int outputSize) {
-  double epsilon = 1e-12; // evita log(0)
+  double epsilon = 1e-12;
   return -log(predicted[trueLabel] + epsilon);
 }
 
