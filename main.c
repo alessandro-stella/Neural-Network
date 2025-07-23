@@ -1,6 +1,5 @@
 #include "mnist.h"
 #include "neunet.h"
-#include <math.h>
 #include <png.h>
 #include <stdio.h>
 #include <stdlib.h>
